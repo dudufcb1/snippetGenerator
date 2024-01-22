@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Generador de Snippets de VS Code</title>
+    <link
+      href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css"
+      rel="stylesheet" />
+    <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+    <style>
+      body {
+        font-family: 'Helvetica', 'Arial', sans-serif;
+      }
+
+      h1 {
+        margin-bottom: 1.6em;
+      }
+
+      h2 {
+        font-weight: normal;
+      }
+
+      h3 {
+        margin-block-end: 0;
+      }
+
+      select {
+        width: 100%;
+        height: 56px;
+        font-size: 1.2rem;
+        padding: 10px;
+        margin-top: 10px;
+      }
+
+      .container {
+        max-width: 600px;
+        padding: 30px;
+      }
+
+      .field-label {
+        font-size: 1.2rem;
+        margin-bottom: 10px;
+      }
+
+      .mdc-text-field {
+        width: 100%;
+        margin-bottom: 20px;
+      }
+
+      .button-wrapper {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .block {
+        background-color: #efefef;
+        padding: 20px;
+        margin-top: 30px;
+      }
+
+      .visually-hidden {
+        display: none;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      td,
+      th {
+        border: 1px solid #dddddd;
+        padding: 8px;
+      }
+
+      tr:nth-child(even) {
+        background-color: #efefef;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>Generador de Snippets de VS Code</h1>
+
+      <form id="form">
+        <div class="field-label" id="snippet-name">Nombre del Snippet:</div>
+        <label
+          class="mdc-text-field mdc-text-field--filled mdc-text-field--no-label">
+          <input
+            class="mdc-text-field__input"
+            type="text"
+            aria-labelledby="snippet-name"
+            name="snippetName"
+            required />
+          <span class="mdc-line-ripple"></span>
+        </label>
+
+        <div class="field-label" id="snippet-scope">Ámbito del Snippet:</div>
+        <select name="snippetScope" required>
+          <option
+            value="javascript,javascriptreact,typescript,typescriptreact"
+            selected>
+            JavaScript, TypeScript
+          </option>
+          <option
+            value="css,html,javascript,javascriptreact,typescript,typescriptreact">
+            CSS, HTML, JavaScript, TypeScript
+          </option>
+          <option value="json">JSON</option>
+          <option value="xml">XML</option>
+        </select>
+
+        <div class="field-label" id="snippet-prefix">Prefijo del Snippet:</div>
+        <label
+          class="mdc-text-field mdc-text-field--filled mdc-text-field--no-label">
+          <input
+            class="mdc-text-field__input"
+            type="text"
+            aria-labelledby="snippet-prefix"
+            name="snippetPrefix"
+            required />
+          <span class="mdc-line-ripple"></span>
+        </label>
+
+        <div class="field-label" id="snippet-body">Cuerpo del Snippet:</div>
+        <label
+          class="mdc-text-field mdc-text-field--filled mdc-text-field--textarea">
+          <span class="mdc-text-field__resizer">
+            <textarea
+              class="mdc-text-field__input"
+              rows="8"
+              aria-label="Cuerpo del Snippet"
+              aria-labelledby="snippet-body"
+              name="snippetBody"
+              required></textarea>
+          </span>
+          <span class="mdc-line-ripple"></span>
+        </label>
+
+        <div class="field-label" id="snippet-description">
+          Descripción del Snippet:
+        </div>
+        <label
+          class="mdc-text-field mdc-text-field--filled mdc-text-field--textarea">
+          <span class="mdc-text-field__resizer">
+            <textarea
+              class="mdc-text-field__input"
+              rows="8"
+              aria-label="Descripción del Snippet"
+              aria-labelledby="snippet-description"
+              name="snippetDescription"
+              required></textarea>
+          </span>
+          <span class="mdc-line-ripple"></span>
+        </label>
+        <button type="button" id="add-placeholder-button">
+          Agregar Placeholder
+        </button>
+
+        <div class="button-wrapper">
+          <button
+            type="submit"
+            class="mdc-button mdc-button--raised mdc-button--touch"
+            id="submit-button">
+            <span class="mdc-button__touch"></span>
+            <span class="mdc-button__ripple"></span>
+            <span class="mdc-button__label" id="submit-button-copy"
+              >Copiar al Portapapeles</span
+            >
+            <span
+              class="mdc-button__label visually-hidden"
+              id="submit-button-loading"
+              >Cargando...</span
+            >
+          </button>
+        </div>
+      </form>
+
+      <div class="block" id="result">
+        <h2>Resultado:</h2>
+
+        <pre id="result-json"></pre>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const form = document.getElementById('form');
+        const result = document.getElementById('result');
+        const resultJSON = document.getElementById('result-json');
+        const addPlaceholderButton = document.getElementById(
+          'add-placeholder-button'
+        );
+        const snippetBodyTextarea = document.querySelector(
+          'textarea[name="snippetBody"]'
+        );
+
+        addPlaceholderButton.addEventListener('click', () => {
+          const cursorPos = snippetBodyTextarea.selectionStart;
+          const currentSnippetBody = snippetBodyTextarea.value;
+
+          // Agregar marcador de posición en la posición actual del cursor
+          const updatedSnippetBody =
+            currentSnippetBody.substring(0, cursorPos) +
+            '${1:placeholder}' +
+            currentSnippetBody.substring(cursorPos);
+
+          // Actualizar el valor del área de texto del cuerpo del snippet
+          snippetBodyTextarea.value = updatedSnippetBody;
+
+          // Enfocar el área de texto después de agregar el marcador de posición
+          snippetBodyTextarea.focus();
+          snippetBodyTextarea.setSelectionRange(cursorPos + 3, cursorPos + 14); // Seleccionar el marcador de posición recién agregado
+        });
+
+        const submitButton = document.getElementById('submit-button');
+        const submitButtonCopy = document.getElementById('submit-button-copy');
+        const submitButtonLoading = document.getElementById(
+          'submit-button-loading'
+        );
+
+        const textFields = document.querySelectorAll('.mdc-text-field');
+        textFields.forEach((field) =>
+          mdc.textField.MDCTextField.attachTo(field)
+        );
+
+        const buttons = document.querySelectorAll('.mdc-button');
+        buttons.forEach((btn) => mdc.ripple.MDCRipple.attachTo(btn));
+
+        const toggleElementDisable = (element, disable) => {
+          disable
+            ? element.setAttribute('disabled', true)
+            : element.removeAttribute('disabled');
+        };
+
+        const toggleVisuallyHidden = (element, remove) => {
+          remove
+            ? element.classList.remove('visually-hidden')
+            : element.classList.add('visually-hidden');
+        };
+
+        const checkSyntax = (result) => {
+          try {
+            JSON.parse(result);
+            return true;
+          } catch (error) {
+            return false;
+          }
+        };
+
+        const displayResults = (data) => {
+          toggleVisuallyHidden(submitButtonCopy);
+          toggleVisuallyHidden(submitButtonLoading, true);
+
+          let output = JSON.stringify(data, null, 2);
+
+          if (checkSyntax(output)) {
+            resultJSON.textContent = output;
+          } else {
+            resultJSON.textContent =
+              'Error de sintaxis. Por favor, revisa el JSON.';
+          }
+        };
+
+        const submitForm = (e) => {
+          e.preventDefault();
+
+          toggleElementDisable(submitButton, true);
+          toggleVisuallyHidden(submitButtonLoading);
+          toggleVisuallyHidden(submitButtonCopy, true);
+
+          const formData = new FormData(form);
+          // Encontrar todos los marcadores de posición en el cuerpo del snippet
+          const placeholders = snippetBody.match(/\${(\d+:.*?)}/g) || [];
+
+          const data = {
+            [formData.get('snippetName')]: {
+              scope: formData.get('snippetScope'),
+              prefix: formData.get('snippetPrefix'),
+              body: formData.get('snippetBody').split('\n'),
+              description: formData.get('snippetDescription'),
+            },
+          };
+
+          displayResults(data);
+        };
+
+        const copyToClipboard = () => {
+          const range = document.createRange();
+          range.selectNodeContents(resultJSON);
+          window.getSelection().removeAllRanges();
+          window.getSelection().addRange(range);
+
+          try {
+            document.execCommand('copy');
+            alert('El JSON del snippet se ha copiado al portapapeles.');
+          } catch (err) {
+            alert(
+              'Ha ocurrido un error al copiar el JSON del snippet al portapapeles.'
+            );
+          }
+
+          window.getSelection().removeAllRanges();
+        };
+
+        form.addEventListener('submit', submitForm);
+        submitButton.addEventListener('click', copyToClipboard);
+      })();
+    </script>
+  </body>
+</html>
